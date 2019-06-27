@@ -63,6 +63,7 @@ public class ProtectionStones extends JavaPlugin {
     // all configuration file options are stored in here
     private PSConfig configOptions;
     static HashMap<String, PSProtectBlock> protectionStonesOptions = new HashMap<>();
+    static HashMap<String, PSProtectBlock> itemsAdderStonesOption = new HashMap<>();
 
     // ps alias to id cache
     static HashMap<World, HashMap<String, ArrayList<String>>> regionNameToID = new HashMap<>();
@@ -138,6 +139,16 @@ public class ProtectionStones extends JavaPlugin {
     public static PSProtectBlock getBlockOptions(String blockType) {
         return protectionStonesOptions.get(blockType);
     }
+    
+    /**
+     * Gets the config options for the protection block type specified.
+     *
+     * @param alias starts with itemsAdder_ 
+     * @return the config options for the protect block specified (null if not found)
+     */
+    public static PSProtectBlock getItemsAdderBlockOptions(String alias) {
+        return itemsAdderStonesOption.get(alias);
+    }
 
     /**
      * @param material material type to check (Bukkit material name)
@@ -145,6 +156,14 @@ public class ProtectionStones extends JavaPlugin {
      */
     public static boolean isProtectBlockType(String material) {
         return protectionStonesOptions.containsKey(material);
+    }
+    
+    /**
+     * @param alias (starts with itemsAdder_)
+     * @return whether or not that material is being used for a protection block
+     */
+    public static boolean isItemAdderProtectBlockType(String alias) {
+        return itemsAdderStonesOption.containsKey(alias);
     }
 
     /**

@@ -16,39 +16,37 @@
 
 package dev.espi.ProtectionStones;
 
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.ApplicableRegionSet;
-import com.sk89q.worldguard.protection.flags.Flag;
-import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
-import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
-import dev.espi.ProtectionStones.event.PSCreateEvent;
-import dev.espi.ProtectionStones.utils.UUIDCache;
-import dev.espi.ProtectionStones.utils.WGUtils;
-import org.bukkit.Bukkit;
+import java.util.List;
+
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.*;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPistonEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+
+import dev.espi.ProtectionStones.utils.UUIDCache;
+import dev.lone.itemsadder.api.ItemsAdder;
 
 public class ListenerClass implements Listener {
 
@@ -76,7 +74,21 @@ public class ListenerClass implements Listener {
         PSProtectBlock blockOptions = ProtectionStones.getBlockOptions(blockType);
 
         // check if block broken is protection stone
-        if (blockOptions == null) return;
+        boolean isItemsAdder = false;
+        if (blockOptions == null) {
+        	if(BlockHandler.isItemsAddedPluginEnabled()) {
+        		if(ItemsAdder.isCustomBlock(pb)) {
+        			blockOptions = ProtectionStones.getItemsAdderBlockOptions("itemsAdder_"+ItemsAdder.getCustomItemName(ItemsAdder.getCustomBlock(pb)));
+        			if(null == blockOptions) {
+        				return;
+        			}else {
+        				isItemsAdder = true;
+        			}
+        		}
+        	}else {
+        		return;
+        	}
+        }
 
         WorldGuardPlugin wg = WorldGuardPlugin.inst();
 
@@ -89,7 +101,7 @@ public class ListenerClass implements Listener {
         if (rgm.getRegion(id) == null) {
 
             // prevent silk touching of protection stone blocks (that aren't holding a region)
-            if (blockOptions.preventSilkTouch) {
+            if (blockOptions.preventSilkTouch || isItemsAdder) {
                 ItemStack left = e.getPlayer().getInventory().getItemInMainHand();
                 ItemStack right = e.getPlayer().getInventory().getItemInOffHand();
                 if (!left.containsEnchantment(Enchantment.SILK_TOUCH) && !right.containsEnchantment(Enchantment.SILK_TOUCH)) {
@@ -116,12 +128,21 @@ public class ListenerClass implements Listener {
 
         // return protection stone if no drop option is off
         if (!blockOptions.noDrop) {
-            if (!p.getInventory().addItem(blockOptions.createItem()).isEmpty()) {
-                // method will return not empty if item couldn't be added
-                PSL.msg(p, PSL.NO_ROOM_IN_INVENTORY.msg());
-                e.setCancelled(true);
-                return;
-            }
+			if (isItemsAdder) {
+				if (!p.getInventory().addItem(ItemsAdder.getCustomBlock(pb)).isEmpty()) {
+					// method will return not empty if item couldn't be added
+					PSL.msg(p, PSL.NO_ROOM_IN_INVENTORY.msg());
+					e.setCancelled(true);
+					return;
+				}
+			} else {
+				if (!p.getInventory().addItem(blockOptions.createItem()).isEmpty()) {
+					// method will return not empty if item couldn't be added
+					PSL.msg(p, PSL.NO_ROOM_IN_INVENTORY.msg());
+					e.setCancelled(true);
+					return;
+				}
+			}
         }
 
         // check if removing the region and firing region remove event blocked it

@@ -16,27 +16,32 @@
 
 package dev.espi.ProtectionStones;
 
-import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.core.conversion.ObjectConverter;
-import com.electronwill.nightconfig.core.conversion.Path;
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.electronwill.nightconfig.core.file.FileConfig;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.apache.commons.io.IOUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.apache.commons.io.IOUtils;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 
-import javax.xml.stream.events.Namespace;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.conversion.ObjectConverter;
+import com.electronwill.nightconfig.core.conversion.Path;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 
 /**
  * Represents the global config (config.toml) settings.
@@ -171,7 +176,11 @@ public class PSConfig {
 
                 Bukkit.getLogger().info("- " + b.type + " (" + b.alias + ")");
                 FlagHandler.initDefaultFlagsForBlock(b); // process flags for block and set regionFlags field
-                ProtectionStones.protectionStonesOptions.put(b.type, b); // add block
+                if(b.alias.startsWith("itemsAdder_")) {
+                	ProtectionStones.itemsAdderStonesOption.put(b.alias, b);
+                }else {
+                	ProtectionStones.protectionStonesOptions.put(b.type, b); // add block
+                }
 
                 // add custom recipes to Bukkit
                 if (b.allowCraftWithCustomRecipe) {

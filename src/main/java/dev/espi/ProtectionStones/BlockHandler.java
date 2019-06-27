@@ -16,16 +16,8 @@
 
 package dev.espi.ProtectionStones;
 
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.flags.Flag;
-import com.sk89q.worldguard.protection.managers.RegionManager;
-import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
-import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-import dev.espi.ProtectionStones.event.PSCreateEvent;
-import dev.espi.ProtectionStones.utils.WGUtils;
+import java.util.HashMap;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -33,11 +25,22 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 
-import java.util.HashMap;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldguard.LocalPlayer;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.flags.Flag;
+import com.sk89q.worldguard.protection.managers.RegionManager;
+import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+
+import dev.espi.ProtectionStones.event.PSCreateEvent;
+import dev.espi.ProtectionStones.utils.WGUtils;
+import dev.lone.itemsadder.api.ItemsAdder;
 
 class BlockHandler {
     private static HashMap<Player, Double> lastProtectStonePlaced = new HashMap<>();
-
+    private static Boolean isItemAdderEnabled = null;
+    
     private static String checkCooldown(Player p) {
         double currentTime = System.currentTimeMillis();
         if (lastProtectStonePlaced.containsKey(p)) {
@@ -89,17 +92,43 @@ class BlockHandler {
     }
 
     static void createPSRegion(BlockPlaceEvent e) {
-        if (e.isCancelled()) return;
+    	if (e.isCancelled()) return;
         Player p = e.getPlayer();
         Block b = e.getBlock();
-
-        // check if the block is a protection stone
-        if (!ProtectionStones.isProtectBlockType(b.getType().toString())) return;
-        PSProtectBlock blockOptions = ProtectionStones.getBlockOptions(b.getType().toString());
+        
+        // check if the block is a protection stone or ItemsAdder protection stone
+        boolean isItemsAdder = false;
+        if (!ProtectionStones.isProtectBlockType(b.getType().toString())) {
+        	if(isItemsAddedPluginEnabled()) {
+        		if(ItemsAdder.isCustomBlock(b)) {
+        			String customItemName = ItemsAdder.getCustomItemName(ItemsAdder.getCustomBlock(b));
+        			if(!ProtectionStones.isItemAdderProtectBlockType("itemsAdder_"+customItemName)) {
+        				return;
+        			}else {
+        				isItemsAdder = true;
+        			}
+        		}	
+        	}else {
+            	return;
+        	}
+        }
+        PSProtectBlock blockOptions;
+        if(!isItemsAdder) {
+        	blockOptions = ProtectionStones.getBlockOptions(b.getType().toString());
+        }else {
+        	blockOptions = ProtectionStones.getItemsAdderBlockOptions("itemsAdder_"+ItemsAdder.getCustomItemName(ItemsAdder.getCustomBlock(b)));
+        }
 
         // check if the item was created by protection stones (stored in custom tag)
         // block must have restrictObtaining enabled for blocking place
-        if (blockOptions.restrictObtaining && !ProtectionStones.isProtectBlockItem(e.getItemInHand(), true)) return;
+        if(!isItemsAdder) {
+        	if (blockOptions.restrictObtaining && !ProtectionStones.isProtectBlockItem(e.getItemInHand(), true)) {
+        		return;
+        	} 
+        }else {
+        	System.out.println("its ItemsAdder item, ignore NBT tag check + ignore restrictObtaining");
+        }
+
 
         // check if player has toggled off placement of protection stones
         if (ProtectionStones.toggleList.contains(p.getUniqueId())) return;
@@ -228,5 +257,12 @@ class BlockHandler {
 
         // hide block if auto hide is enabled
         if (blockOptions.autoHide) b.setType(Material.AIR);
+    }
+    
+    public static boolean  isItemsAddedPluginEnabled() {
+    	if(null == isItemAdderEnabled) {
+    		isItemAdderEnabled = Bukkit.getPluginManager().isPluginEnabled("ItemsAdder");
+    	}
+		return isItemAdderEnabled;
     }
 }
